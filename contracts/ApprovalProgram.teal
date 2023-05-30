@@ -89,7 +89,46 @@ addMonster:
 // ApplicationArgs 2 is Y
 // ApplicationArgs 3 is ASA_id
 
+pushbytes "MONSTERS"
+int 0
+int 8
+box_extract //[box_length (first 8 bytes)]
+btoi //[box_length (uint64)]
 
+pushbytes "MONSTERS" //[box_length (uint64), "MONSTERS"]
+dig 1 //[box_length (uint64), "MONSTERS", box_length (uint64)]
+int 24
+* //[box_length (uint64), "MONSTERS", position_of_X (uint64)]
+int 8
++
+swap
+dig 1 //[box_length (uint64), position_of_X (uint64), "MONSTERS", position_of_X (uint64)]
+txna ApplicationArgs 1 //[box_length (uint64), position_of_X (uint64), "MONSTERS", position_of_X (uint64), X]
+box_replace //[box_length (uint64), position_of_X (uint64)]
+int 8
++
+dup
+pushbytes "MONSTERS"
+swap
+txna ApplicationArgs 2
+box_replace
+int 8
++
+pushbytes "MONSTERS"
+swap
+txna ApplicationArgs 3
+box_replace //[box_length]
+int 1
++
+pushbytes "MONSTERS"
+swap
+int 0
+swap
+itob
+box_replace
+
+int 1
+return
 
 enterPlayer:
 //if player is not opted in, don't let them enter the game
@@ -189,18 +228,266 @@ return
 exitAndSavePlayer:
 //save the player's state before quitting
 
+//check if player is active
+txn Sender
+pushbytes "SCORE"
+app_local_get
+int 0
+!=
+assert
+
+//add a player's local data into their respective box
+//push POS_X
+txn Sender
+dup
+dup
+pushbytes "POS_X"
+app_local_get  //[address, address, local_pos_x]
+int 0 
+swap //[address, address, 0, local_pos_x]
+itob
+box_replace //[address]
+
+//push POS_Y
+dup
+dup
+pushbytes "POS_Y"
+app_local_get  //[address, address, local_pos_y]
+int 8 
+swap //[address, address, 8, local_pos_y]
+itob
+box_replace //[address]
+
+//push UNSECURED_ASSET
+dup
+dup
+pushbytes "UNSECURED_ASSET"
+app_local_get  //[address, address, local_pos_UNSECURED_ASSET]
+int 16
+swap //[address, address, 16, local_pos_UNSECURED_ASSET]
+itob
+box_replace //[address]
+
+//push SCORE
+dup
+pushbytes "SCORE"
+app_local_get
+int 24
+swap
+itob
+box_replace
+
+//clear state program
+txn Sender
+pushbytes "POS_X"
+int 0
+app_local_put
+
+txn Sender
+pushbytes "POS_Y"
+int 0
+app_local_put
+
+txn Sender
+pushbytes "SCORE"
+int 0
+app_local_put
+
+txn Sender
+pushbytes "UNSECURED_ASSET"
+int 0
+app_local_put
 
 
 playerMove:
 //allow the player to move through the map
+txn Sender
+txna ApplicationArgs 1
+pushbytes "UP"
+==
+bnz up
+txna ApplicationArgs 1
+pushbytes "DOWN"
+==
+bnz down
+txna ApplicationArgs 1
+pushbytes "RIGHT"
+==
+bnz right
+txna ApplicationArgs 1
+pushbytes "LEFT"
+==
+bnz left
 
+
+up:
+pushbytes "POS_Y"
+app_local_get
+int 1
++
+txn Sender
+swap
+pushbytes "POS_Y"
+swap
+app_local_put
+ 
+down:
+pushbytes "POS_Y"
+app_local_get
+int 1
+-
+txn Sender
+swap
+pushbytes "POS_Y"
+swap
+app_local_put
+
+right:
+pushbytes "POS_X"
+app_local_get
+int 1
++
+txn Sender
+swap
+pushbytes "POS_X"
+swap
+app_local_put
+
+left:
+pushbytes "POS_X"
+app_local_get
+int 1
+-
+txn Sender
+swap
+pushbytes "POS_X"
+swap
+app_local_put
+
+int 1
+return
 
 
 playerKillMonster:
 //allow player to kill monsters, erasing them from the array
     //and rewarding the player with an NFT
+//check if your hands are full dummy
+txn Sender
+pushbytes "UNSECURED_ASSET"
+app_local_get
+int 0
+==
+assert
 
+txna Assets 0
+//findMonster [monsterASAID]
+callsub findMonsterIndex  //[..,index_of_monster]
+pushbytes "MONSTERS"
+box_get //[index_of_monster, mbox]
+pop
+dup //[index_of_monster, mbox, mbox]
+dig 2 //[index_of_monster, mbox, mbox, index_of_monster]
+extract_uint64 //[index_of_monster, mbox, POS_X]
+dig 1 //[index_of_monster, mbox, POS_X, mbox]
+dig 3 //[index_of_monster, mbox, POS_X, mbox, index_of_monster]
+int 8
++   //[index_of_monster, mbox, POS_X, mbox, index_of_monster+8]
+extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y]
+dig 2
+dig 4
+int 16
++
+extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID]
+pushbytes "MONSTERS"
+dig 5
+byte 0x000000000000000000000000000000000000000000000000
+box_replace
 
+//fill the box with the last monster
+dig 3
+int 0
+extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, len]
+int 1 
+-
+int 24
+*
+int 8
++ //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster]
+dig 4
+dig 1
+extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, LM_POS_X]
+dig 5
+dig 2
+int 8
++
+extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, LM_POS_X, LM_POS_Y]
+dig 6
+dig 3
+int 16
++
+extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, LM_POS_X, LM_POS_Y, LM_ASA_ID]
+dig 7
+dig 9
+dig 4
+itob
+box_replace
+dig 7
+dig 9
+int 8
++
+dig 3
+itob
+box_replace
+dig 7
+dig 9
+int 16
++
+dig 2
+itob
+box_replace
+pop
+pop
+pop //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster]
+
+dig 4
+int 0
+extract_uint64
+int 1
+-
+dig 5
+swap
+int 0
+swap
+itob
+box_replace //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster]
+pop //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID]
+txn Sender
+pushbytes "UNSECURED_ASSET"
+dig 2
+app_local_put //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID]
+
+itxn_begin //xfer->type
+
+int axfer
+itxn_field TypeEnum
+itxn_field XferAsset //[index_of_monster, mbox, POS_X, POS_Y]
+txn Sender
+itxn_field AssetReceiver
+itxn_submit
+
+txn Sender
+pushbytes "SCORE"
+app_local_get
+int 1
++
+txn Sender
+pushbytes "SCORE"
+dig 2
+app_local_put
+pop
+
+int 1
+return
 
 pvpSteal:
 //allow player to steal from another player holding an unsecured asset
@@ -291,4 +578,12 @@ int 2
 +                           //[a_x, a_y, b_x, b_y, b_y^2 + b_x^2 + a_y^2 + a_x^2, r**2 + 2*b_y*a_y + 2*b_x*a_x]
 <=                          //[a_x, a_y, b_x, b_y, b_y^2 + b_x^2 + a_y^2 + a_x^2 <= r**2 + 2*b_y*a_y + 2*b_x*a_x]
 
+retsub
+
+getMonsterLen:
+pushbytes "MONSTERS"
+box_get //[mbox]
+pop //put assert better
+int 0
+extract_uint64
 retsub

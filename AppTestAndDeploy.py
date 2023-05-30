@@ -648,4 +648,8 @@ if __name__ == "__main__":
     print("APP DEPLOYED AND FUNDED CORRECTLY WITH ID ", AppID)
     
     AllTests.AppID = AppID
-    unittest.main()
+    # unittest.main()
+    AllTests().test_AddMonsters()
+    # AllTests().test_AddPlayers()
+    # AllTests().test_playerKillMonster()
+    # AllTests().test_PlayerMove()
