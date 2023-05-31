@@ -594,8 +594,11 @@ pop
 pop
 pop //[]
 
-//store
-
+//store (just claer out the local variable? -> the player gets their local state variable cleared out, and their asset is safe)
+txn Sender
+pushbytes "UNSECURED_ASSET"
+int 0
+app_local_put
 
 //score increase
 txn Sender
