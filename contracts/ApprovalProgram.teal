@@ -143,6 +143,8 @@ box_replace
 int 1
 return
 
+
+
 enterPlayer:
 //if player is not opted in, don't let them enter the game
 txn Sender
@@ -315,8 +317,19 @@ int 1
 return
 
 
+
+
 playerMove:
 //allow the player to move through the map
+
+//check if player is active
+txn Sender
+pushbytes "SCORE"
+app_local_get
+int 0
+!=
+assert
+
 txn Sender
 txna ApplicationArgs 1
 pushbytes "UP"
@@ -338,7 +351,6 @@ bnz left
 int 0
 return
 
-
 up:
 pushbytes "POS_Y"
 app_local_get
@@ -356,6 +368,11 @@ pushbytes "POS_Y"
 app_local_get
 int 1
 -
+//check if the Ypos was 0
+//dup
+//int 0
+//>=
+//assert
 txn Sender
 swap
 pushbytes "POS_Y"
@@ -380,6 +397,11 @@ pushbytes "POS_X"
 app_local_get
 int 1
 -
+//check if the Xpos was 0
+//dup
+//int 0
+//>=
+//assert
 txn Sender
 swap
 pushbytes "POS_X"
@@ -451,19 +473,21 @@ dig 3
 int 16
 +
 extract_uint64 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, LM_POS_X, LM_POS_Y, LM_ASA_ID]
-dig 7
-dig 9
-dig 4
+pushbytes "MONSTERS"
+dig 9 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, LM_POS_X, LM_POS_Y, LM_ASA_ID, "MONSTERS", index_of_monster]
+dig 4 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, LM_POS_X, LM_POS_Y, LM_ASA_ID, "MONSTERS", index_of_monster, LM_POS_X]
 itob
 box_replace
-dig 7
+//dig 7
+pushbytes "MONSTERS"
 dig 9
 int 8
 +
 dig 3
 itob
 box_replace
-dig 7
+//dig 7
+pushbytes "MONSTERS"
 dig 9
 int 16
 +
@@ -474,12 +498,13 @@ pop
 pop
 pop //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster]
 
-dig 4
+dig 4 //[index_of_monster, mbox, POS_X, POS_Y, ASA_ID, pos_of_last_monster, mbox]
 int 0
 extract_uint64
 int 1
 -
-dig 5
+//dig 5
+pushbytes "MONSTERS"
 swap
 int 0
 swap
@@ -523,6 +548,20 @@ app_local_get
 int 0
 ==
 assert //[]
+
+//check if players are active
+txna Accounts 0
+pushbytes "SCORE"
+app_local_get
+int 0
+!=
+assert
+txn Sender
+pushbytes "SCORE"
+app_local_get
+int 0
+!=
+assert
 
 //check if the distance between the players is at most 10 units
 txna Accounts 0 //[address_of_first_account]
@@ -590,7 +629,7 @@ pushbytes "SCORE"
 app_local_get
 int 0
 !=
-assert
+assert //[]
 
 //check that player has an asset to store
 txn Sender
@@ -598,26 +637,24 @@ pushbytes "UNSECURED_ASSET"
 app_local_get
 int 0
 !=
-assert
+assert //[]
 
 //check if the player is in secure area
-int 0
-int 0
 txn Sender
-dup
+dup //[addr,addr]
 pushbytes "POS_X"
-app_local_get
+app_local_get //[addr,posX]
 swap
 pushbytes "POS_Y"
-app_local_get //[0,0, posX, posY]
-int 100 //[0,0, posX, posY, 100]
-callsub checkDistInRange //[0,0, posX, posY, ?]
+app_local_get //[posX, posY]
+int 10 //[posX, posY, 10]
+<=
 int 1
 assert
-pop
-pop
-pop
-pop //[]
+int 10
+<=
+int 1
+assert
 
 //store (just claer out the local variable? -> the player gets their local state variable cleared out, and their asset is safe)
 txn Sender
@@ -628,14 +665,14 @@ app_local_put
 //score increase
 txn Sender
 pushbytes "SCORE"
-app_local_get
+app_local_get //[Score]
 int 1
-+
-txn Sender
++   //[Score+1]
+txn Sender //[Score+1, Sender]
 pushbytes "SCORE"
-dig 2
+dig 2 //[Score+1, Sender, SCORE, Score+1]
 app_local_put
-pop
+pop //[]
 
 int 1
 return
