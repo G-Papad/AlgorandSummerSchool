@@ -116,7 +116,20 @@ int 8
 +
 pushbytes "MONSTERS"
 swap
-txna ApplicationArgs 3
+//txna ApplicationArgs 3 //that's must change-> mint NFT
+//mint NFT
+itxn_begin
+
+int acfg
+itxn_field TypeEnum
+global CurrentApplicationAddress
+dupn 2
+itxn_field ConfigAssetManager
+itxn_field ConfigAssetFreeze
+itxn_field ConfigAssetClawback
+itxn_submit
+itxn CreatedAssetID
+itob
 box_replace //[box_length]
 int 1
 +
@@ -298,6 +311,9 @@ pushbytes "UNSECURED_ASSET"
 int 0
 app_local_put
 
+int 1
+return
+
 
 playerMove:
 //allow the player to move through the map
@@ -319,6 +335,9 @@ pushbytes "LEFT"
 ==
 bnz left
 
+int 0
+return
+
 
 up:
 pushbytes "POS_Y"
@@ -330,7 +349,8 @@ swap
 pushbytes "POS_Y"
 swap
 app_local_put
- 
+b exit
+
 down:
 pushbytes "POS_Y"
 app_local_get
@@ -341,6 +361,7 @@ swap
 pushbytes "POS_Y"
 swap
 app_local_put
+b exit
 
 right:
 pushbytes "POS_X"
@@ -352,6 +373,7 @@ swap
 pushbytes "POS_X"
 swap
 app_local_put
+b exit
 
 left:
 pushbytes "POS_X"
@@ -363,9 +385,12 @@ swap
 pushbytes "POS_X"
 swap
 app_local_put
+b exit
 
+exit:
 int 1
 return
+
 
 
 playerKillMonster:
