@@ -491,13 +491,126 @@ return
 
 pvpSteal:
 //allow player to steal from another player holding an unsecured asset
+//check if caller has already full hands
+txn Sender
+pushbytes "UNSECURED_ASSET"
+app_local_get
+int 0
+==
+assert //[]
+
+//check if the distance between the players is at most 10 units
+txna Accounts 0 //[address_of_first_account]
+dup //[address_of_first_account, address_of_first_account]
+pushbytes "POS_X"
+app_local_get //[address_of_first_account, A0_posX]
+dig 1 //[address_of_first_account, A0_posX, address_of_first_account]
+pushbytes "POS_Y"
+app_local_get //[address_of_first_account, A0_posX, A0_posY]
+txn Sender
+dup
+pushbytes "POS_X"
+app_local_get //[address_of_first_account, A0_posX, A0_posY, address_of_sender, S_posX]
+swap
+pushbytes "POS_Y"
+app_local_get //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY]
+int 100
+callsub checkDistInRange //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY, ?] 
+int 1
+assert //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY] 
+
+
+//change local variables
+pop
+pop
+pop
+pop //[address_of_first_account]
+dup
+pushbytes "UNSECURED_ASSET"
+app_local_get //[address_of_first_account, A0_UA]
+swap
+pushbytes "UNSECURED_ASSET"
+int 0
+app_global_put //[A0_UA]
+dup //[A0_UA, A0_UA]
+txn Sender
+swap
+pushbytes "UNSECURED_ASSET"
+swap
+app_local_put //[A0_UA]
+
+//inner transaction ?? how to take as sender the Account 0
+itxn_begin //xfer->type
+
+int axfer
+itxn_field TypeEnum
+itxn_field XferAsset //[]
+txna Accounts 0
+itxn_field AssetSender
+txn Sender
+itxn_field AssetReceiver
+itxn_submit
+
+int 1 
+return
 
 
 
 secureAsset:
 //allow player to secure an asset being held, iff they are inside the safe zone
 
+//check if player is active
+txn Sender
+pushbytes "SCORE"
+app_local_get
+int 0
+!=
+assert
 
+//check that player has an asset to store
+txn Sender
+pushbytes "UNSECURED_ASSET"
+app_local_get
+int 0
+!=
+assert
+
+//check if the player is in secure area
+int 0
+int 0
+txn Sender
+dup
+pushbytes "POS_X"
+app_local_get
+swap
+pushbytes "POS_Y"
+app_local_get //[0,0, posX, posY]
+int 100 //[0,0, posX, posY, 100]
+callsub checkDistInRange //[0,0, posX, posY, ?]
+int 1
+assert
+pop
+pop
+pop
+pop //[]
+
+//store
+
+
+//score increase
+txn Sender
+pushbytes "SCORE"
+app_local_get
+int 1
++
+txn Sender
+pushbytes "SCORE"
+dig 2
+app_local_put
+pop
+
+int 1
+return
 
 
 //Subroutines:
