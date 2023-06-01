@@ -593,6 +593,9 @@ class AllTests(MonsterArenaTestCommon):
         cachedVictimLS = self.getPlayerLocalState(victim)
         cachedAccLS = self.getPlayerLocalState(acc)
 
+        print("victim ls: ", cachedVictimLS)
+        print("thief ls: ", cachedAccLS)
+
         try:
             out=playerSteal(self.AppID, acc, victim.address)
         except:

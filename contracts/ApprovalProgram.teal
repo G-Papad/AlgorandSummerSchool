@@ -551,15 +551,23 @@ pop
 int 1
 return
 
-pvpSteal:
+pvpSteal: //[]
 //allow player to steal from another player holding an unsecured asset
 //check if caller has already full hands
-txn Sender
+txn Sender //[address]
 pushbytes "UNSECURED_ASSET"
-app_local_get
+app_local_get 
 int 0
 ==
 assert //[]
+
+//check if Account 0 has Asset to steal
+txna Accounts 0 
+pushbytes "UNSECURED_ASSET"
+app_local_get
+int 0
+!=
+assert
 
 //find the first available Account
 txna Accounts 0
@@ -578,7 +586,7 @@ assert //[]
 //check if the distance between the players is at most 10 units
 txna Accounts 0 //[address_of_first_account]
 dup //[address_of_first_account, address_of_first_account]
-pushbytes "POS_X"
+pushbytes "POS_X" //[address_of_first_account, address_of_first_account, "POS_X"]
 app_local_get //[address_of_first_account, A0_posX]
 dig 1 //[address_of_first_account, A0_posX, address_of_first_account]
 pushbytes "POS_Y"
@@ -602,22 +610,22 @@ pop
 pop
 pop
 pop //[address_of_first_account]
+//txna Accounts 0
 dup
-pushbytes "UNSECURED_ASSET"
+pushbytes "UNSECURED_ASSET" 
 app_local_get //[address_of_first_account, A0_UA]
 swap
 pushbytes "UNSECURED_ASSET"
 int 0
-app_global_put //[A0_UA]
+app_local_put //[A0_UA]
 dup //[A0_UA, A0_UA]
 txn Sender 
 swap //[A0_UA, Sender, A0_UA]
-pushbytes "UNSECURED_ASSET"
+pushbytes "UNSECURED_ASSET" //678767877
 swap //[A0_UA, Sender, "UNSECURED_ASSET", A0_UA]
 app_local_put //[A0_UA]
 
-//inner transaction ?? how to take as sender the Account 0
-itxn_begin //xfer->type
+itxn_begin 
 
 int axfer
 itxn_field TypeEnum
@@ -626,6 +634,8 @@ txna Accounts 0
 itxn_field AssetSender
 txn Sender
 itxn_field AssetReceiver
+int 1
+itxn_field AssetAmount
 itxn_submit
 
 int 1 
