@@ -443,6 +443,7 @@ class AllTests(MonsterArenaTestCommon):
     @classmethod
     def test_playerKillMonster(self):
         monsterIdx = 0
+        
         for acc in sandbox.get_accounts():
             try:
                 cachedLocalVal = self.getPlayerLocalState(acc)
@@ -471,8 +472,10 @@ class AllTests(MonsterArenaTestCommon):
             balances = sandbox.get_indexer_client().asset_balances(monsterToErase["ASA_ID"])
             for b in balances["balances"]:
                 if (b["address"] == get_application_address(self.AppID)):
+                    print("out of contract")
                     assert b["amount"] == 0, "contract should not have the asset"
                 elif b["address"] == acc.address:
+                    print("in player")
                     assert b["amount"] == 1, "account should have the asset now"
 
 
@@ -522,6 +525,8 @@ class AllTests(MonsterArenaTestCommon):
         cachedBoxNoAddr.pop("ADDRESS")
 
         assert boxValNoAddr == zeroVal, "box was not zeroed out"
+        print(currentLS)
+        print(cachedBoxNoAddr)
         assert currentLS == cachedBoxNoAddr, "local state =/= box stuff"
     
     
@@ -539,6 +544,7 @@ class AllTests(MonsterArenaTestCommon):
             
     @classmethod
     def test_PlayerMove(self):
+        print("I entered PlayerMove :)")
         acc = sandbox.get_accounts()[1]
         prevLocalState = self.getPlayerLocalState(acc)
         try:

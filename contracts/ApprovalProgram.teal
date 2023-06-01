@@ -62,6 +62,12 @@ txna ApplicationArgs 0
 ==
 bnz playerKillMonster
 
+pushbytes "secureAsset"
+txna ApplicationArgs 0
+==
+bnz secureAsset
+
+
 err
 
 
@@ -122,6 +128,10 @@ itxn_begin
 
 int acfg
 itxn_field TypeEnum
+byte "MONSTER_ASA_ID"
+itxn_field ConfigAssetName
+int 1
+itxn_field ConfigAssetTotal
 global CurrentApplicationAddress
 dupn 2
 itxn_field ConfigAssetManager
@@ -177,13 +187,13 @@ int 0
 app_local_put
 
 txn Sender
-pushbytes "SCORE"
-int 1
+pushbytes "UNSECURED_ASSET"
+int 0
 app_local_put
 
 txn Sender
-pushbytes "UNSECURED_ASSET"
-int 0
+pushbytes "SCORE"
+int 1
 app_local_put
 
 b end
@@ -214,7 +224,7 @@ dup                      //[...boxData, boxData]
 int 16                   //[...boxData, boxData, 74]
 extract_uint64           //[...boxData, score]
 txn Sender               //[...boxData, score, senderAddr]
-pushbytes "SCORE"        //[...boxData, score, senderAddr, "SCORE"]
+pushbytes "UNSECURED_ASSET"        //[...boxData, score, senderAddr, "SCORE"]
 dig 2                    //[...boxData, score, senderAddr, "SCORE", score]
 app_local_put            //[...boxData, score]
 pop                      //[boxData]
@@ -223,7 +233,7 @@ dup                      //[boxData, boxData]
 int 24                   //[...boxData, boxData, 82]
 extract_uint64           //[...boxData, unsecured_asset]
 txn Sender               //[...boxData, unsecured_asset, senderAddr]
-pushbytes "UNSECURED_ASSET" //[...boxData, unsecured_asset, senderAddr, "UNSECURED_ASSET"]
+pushbytes "SCORE" //[...boxData, unsecured_asset, senderAddr, "UNSECURED_ASSET"]
 dig 2                    //[...boxData, unsecured_asset, senderAddr, "UNSECURED_ASSET", unsecured_asset]
 app_local_put            //[...boxData, unsecured_asset]
 pop                      //[...boxData]
@@ -523,6 +533,8 @@ itxn_field TypeEnum
 itxn_field XferAsset //[index_of_monster, mbox, POS_X, POS_Y]
 txn Sender
 itxn_field AssetReceiver
+int 1
+itxn_field AssetAmount
 itxn_submit
 
 txn Sender
@@ -549,7 +561,7 @@ int 0
 ==
 assert //[]
 
-//check if players are active
+//find the first available Account
 txna Accounts 0
 pushbytes "SCORE"
 app_local_get
@@ -561,7 +573,7 @@ pushbytes "SCORE"
 app_local_get
 int 0
 !=
-assert
+assert //[]
 
 //check if the distance between the players is at most 10 units
 txna Accounts 0 //[address_of_first_account]
@@ -579,8 +591,9 @@ swap
 pushbytes "POS_Y"
 app_local_get //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY]
 int 100
-callsub checkDistInRange //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY, ?] 
+callsub checkDistInRange //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY, distance?] 
 int 1
+==
 assert //[address_of_first_account, A0_posX, A0_posY, S_posX, S_posY] 
 
 
@@ -597,10 +610,10 @@ pushbytes "UNSECURED_ASSET"
 int 0
 app_global_put //[A0_UA]
 dup //[A0_UA, A0_UA]
-txn Sender
-swap
+txn Sender 
+swap //[A0_UA, Sender, A0_UA]
 pushbytes "UNSECURED_ASSET"
-swap
+swap //[A0_UA, Sender, "UNSECURED_ASSET", A0_UA]
 app_local_put //[A0_UA]
 
 //inner transaction ?? how to take as sender the Account 0
